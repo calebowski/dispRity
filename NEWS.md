@@ -1,4 +1,4 @@
-dispRity v1.9.6 (2025-04-08)
+dispRity v1.9.7 (2025-08-22)
 =========================
 
 ### NEW FEATURES
@@ -11,13 +11,14 @@ dispRity v1.9.6 (2025-04-08)
  * The output of `multi.ace` using `estimation.details` with specific character arguments (e.g. `"detail_name"`) is now sorted in the order `output[[tree_ID]][[character_ID]]$detail_name`, rather than the previous version order that was `output[[tree_ID]]$detail_name[[character_ID]]`.
 
 ### BUG FIXES
-
+  
  * `plot.dispRity` now handles infinite values for generating plot limits (thanks to Mario Corio for spotting that one).
  * `dispRity` now correctly handles multiple matrices and multiple trees for multiple metrics.
  * `print` now correctly prints the content of "empty" data.
  * Fixed retro-compatibility for S3 behaviours (`plot` and `summary`) for `dispRity` objects made before `1.9`.
  * Fixed bug with `multi.ace` that always returned missing data tokens for discrete invariant characters.
  * Fixed bug withe `chrono.subsets` for odd tree shapes (issue [#134](https://github.com/TGuillerme/dispRity/issues/134)).
+ * `plot.dispRity` with `"preview"` now correctly handles custom subsets with the same sizes.
 
 dispRity v1.9 (2024-11-13)  *distant update*
 =========================
