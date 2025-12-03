@@ -1,3 +1,13 @@
+dispRity v1.9.8 (2025-12-03)
+=========================
+### NEW FEATURES
+ * New threshold method in `multi.ace`: `"max_tiebreaker"` for resolving tied maximum likelihood ancestral states by randomly selecting one state (alternative to `"max"` which returns all tied states).
+
+
+### MINOR IMPROVEMENTS
+ * **Changed default argument** in `multi.ace`: `threshold` default is now `"max"` (previously `TRUE` which mapped to `"relative"`).
+
+
 dispRity v1.9.7 (2025-08-22)
 =========================
 
