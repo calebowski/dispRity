@@ -947,7 +947,7 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                   } else {
                                                     max_states <- names(taxon[taxon >= (max(taxon))])
                                                     if (length(max_states) > 1) {
-                                                        return(sample(max_states, size = 1)) ## randomly selects one state (always returns single states)
+                                                        return(sample(max_states, size = 1)) ## randomly selects one state if tied (always returns single states)
                                                     } else { 
                                                         return(max_states)
                                                     }
@@ -957,7 +957,7 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
-                                                    return(names(taxon[taxon >= threshold])) ## will leave tied states 0/1
+                                                    return(names(taxon[taxon >= threshold])) 
                                                   }
                                                  }},
             sample  = {select.states <- function(taxon, threshold){
