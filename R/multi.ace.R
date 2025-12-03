@@ -7,7 +7,7 @@
 #' @param models A \code{character} vector, unambiguous named \code{list} or \code{matrix} to be passed as model arguments to \code{castor::asr_mk_model} or \code{ape::ace} (see details).
 #' @param sample An \code{integer} for the number of matrices to sample per tree (default is \code{1}). See details.
 #' @param sample.fun If \code{sample > 1}, a named list containing the following elements: \code{fun} the sampling distribution for continuous characters; and \code{param} (optional) a named list of parameters and their estimation function (default is \code{sample.fun = list(fun = runif, param = list(min = min, max = max))}). See details.
-#' @param threshold Is ignored if \code{sample > 1}, else either a \code{logical} for applying a relative threshold (\code{TRUE} - default) or no threshold (\code{FALSE}) or a \code{numeric} value of the threshold (e.g. 0.95). See details.
+#' @param threshold Is ignored if \code{sample > 1}, else either a \code{character} string for the threshold method (\code{"max"} (default), \code{"max_tiebreaker"}, or \code{"relative"}; see details) or a \code{numeric} value of the absolute threshold (e.g. 0.95).
 #' @param special.tokens optional, a named \code{vector} of special tokens to be passed to \code{\link[base]{grep}} (make sure to protect the character with \code{"\\\\"}). By default \code{special.tokens <- c(missing = "\\\\?", inapplicable = "\\\\-", polymorphism = "\\\\&", uncertainty = "\\\\/")}. Note that \code{NA} values are not compared and that the symbol "@" is reserved and cannot be used.
 #' @param special.behaviours optional, a \code{list} of one or more functions for a special behaviour for \code{special.tokens}. See details.
 #' @param brlen.multiplier optional, a vector of branch length modifiers (e.g. to convert time branch length in changes branch length) or a list of vectors (the same length as \code{tree}).
@@ -189,7 +189,7 @@
 #' @author Thomas Guillerme
 #' @export
 
-multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = runif, param = list(min = min, max = max)), threshold = TRUE, special.tokens, special.behaviours, brlen.multiplier, verbose = FALSE, parallel = FALSE, output, options.args, estimation.details = NULL) {
+multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = runif, param = list(min = min, max = max)), threshold = "max", special.tokens, special.behaviours, brlen.multiplier, verbose = FALSE, parallel = FALSE, output, options.args, estimation.details = NULL) {
 
     match_call <- match.call()
 
@@ -240,16 +240,24 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
     #########
 
     ## threshold
-    check.class(threshold, c("logical", "numeric"))
-    if(is(threshold, "logical")) {
-        if(threshold) {
-            ## Use the relative threshold function
-            threshold.type <- "relative"
-        } else {
-            ## Use no threshold (just max)
-            threshold.type <- "max" 
+    check.class(threshold, c("numeric", "character"))
+    if(is(threshold, "character")) {
+        valid_thresholds <- c("max", "max_tiebreaker", "relative")
+        if(!threshold %in% valid_thresholds) {
+            stop(paste0("Invalid threshold option: ", threshold, "! Must be one of: ", paste(valid_thresholds, collapse = ", ")), call. = FALSE)
         }
-    } else {
+        ## Use no threshold (just max)
+        if(threshold == "max_tiebreaker"){
+            threshold.type <- "max_tiebreaker"
+        }
+        if(threshold == "max") {
+            threshold.type <- "max"
+        } 
+        if(threshold == "relative"){
+            threshold.type <- "relative"
+        }
+    }
+    if(is(threshold, "numeric")) {
         ## Use an absolute threshold
         threshold.type <- "absolute"
     }
@@ -925,7 +933,15 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                     return(names(taxon[taxon >= (max(taxon) - 1/length(taxon))]))
                                                   }
                                                  }},
-            max      = {select.states <- function(taxon, threshold) {
+            max = {select.states <- function(taxon, threshold) {
+                                  if(all(is.na(taxon))) {
+                                    return(NA)
+                                  } else {
+                                    return(names(taxon[taxon >= (max(taxon))]))
+                                  }
+                             }},
+
+            max_tiebreaker = {select.states <- function(taxon, threshold) {
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
@@ -941,7 +957,7 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
-                                                    return(names(taxon[taxon >= threshold]))
+                                                    return(names(taxon[taxon >= threshold])) ## will leave tied states 0/1
                                                   }
                                                  }},
             sample  = {select.states <- function(taxon, threshold){
