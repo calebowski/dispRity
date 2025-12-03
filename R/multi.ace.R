@@ -929,7 +929,12 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
-                                                    return(names(taxon[taxon >= (max(taxon))]))
+                                                    max_states <- names(taxon[taxon >= (max(taxon))])
+                                                    if (length(max_states) > 1) {
+                                                        return(sample(max_states, size = 1)) ## randomly selects one state (always returns single states)
+                                                    } else { 
+                                                        return(max_states)
+                                                    }
                                                   }
                                                  }},
             absolute = {select.states <- function(taxon, threshold) {
