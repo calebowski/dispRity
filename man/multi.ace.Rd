@@ -10,7 +10,7 @@ multi.ace(
   models,
   sample = 1,
   sample.fun = list(fun = runif, param = list(min = min, max = max)),
-  threshold = TRUE,
+  threshold = "max",
   special.tokens,
   special.behaviours,
   brlen.multiplier,
@@ -32,7 +32,7 @@ multi.ace(
 
 \item{sample.fun}{If \code{sample > 1}, a named list containing the following elements: \code{fun} the sampling distribution for continuous characters; and \code{param} (optional) a named list of parameters and their estimation function (default is \code{sample.fun = list(fun = runif, param = list(min = min, max = max))}). See details.}
 
-\item{threshold}{Is ignored if \code{sample > 1}, else either a \code{logical} for applying a relative threshold (\code{TRUE} - default) or no threshold (\code{FALSE}) or a \code{numeric} value of the threshold (e.g. 0.95). See details.}
+\item{threshold}{Is ignored if \code{sample > 1}, else either a \code{character} string for the threshold method (\code{"max"} (default), \code{"max_tiebreaker"}, or \code{"relative"}; see details) or a \code{numeric} value of the absolute threshold (e.g. 0.95).}
 
 \item{special.tokens}{optional, a named \code{vector} of special tokens to be passed to \code{\link[base]{grep}} (make sure to protect the character with \code{"\\\\"}). By default \code{special.tokens <- c(missing = "\\\\?", inapplicable = "\\\\-", polymorphism = "\\\\&", uncertainty = "\\\\/")}. Note that \code{NA} values are not compared and that the symbol "@" is reserved and cannot be used.}
 
@@ -112,7 +112,7 @@ When using \code{sample > 1}, multiple estimations are sampled per tree:
      \item For discrete characters, the estimations are sampled using their scaled likelihood.
 }
 
-The \code{threshold} option allows to convert ancestral states likelihoods into discrete states. When \code{threshold = FALSE}, the ancestral state estimated is the one with the highest likelihood (or at random if likelihoods are equal). When \code{threshold = TRUE}, the ancestral state estimated are all the ones that are have a scaled likelihood greater than the maximum observed scaled likelihood minus the inverse number of possible states (i.e. \code{select_state >= (max(likelihood) - 1/n_states)}). This option makes the threshold selection depend on the number of states (i.e. if there are more possible states, a lower scaled likelihood for the best state is expected). Finally using a numerical value for the threshold option (e.g. \code{threshold = 0.95}) will simply select only the ancestral states estimates with a scaled likelihood equal or greater than the designated value. This option makes the threshold selection absolute. Regardless, if more than one value is select, the uncertainty token (\code{special.tokens["uncertainty"]}) will be used to separate the states. If no value is selected, the uncertainty token will be use between all observed characters (\code{special.tokens["uncertainty"]}).
+The \code{threshold} option allows to convert ancestral states likelihoods into discrete states. When \code{threshold = "max"} (default), the ancestral state estimated is the one with the highest likelihood. If the highest likelihoods are tied, the uncertainty token is used (\code{special.tokens["uncertainty"]}).  When \code{threshold = "max_tiebreaker"}, a single state is returned at random in the event of a tie. When \code{threshold = "relative"}, the ancestral states returned are all the ones that have a scaled likelihood greater than the maximum observed scaled likelihood minus the inverse number of possible states (i.e. \code{select_state >= (max(likelihood) - 1/n_states)}). This option makes the threshold selection depend on the number of states (i.e. if there are more possible states, a lower scaled likelihood for the best state is expected). Finally using a numerical value for the threshold option (e.g. \code{threshold = 0.95}) will simply select only the ancestral states estimates with a scaled likelihood equal or greater than the designated value. This option makes the threshold selection absolute. Regardless, if more than one value is selected, the uncertainty token (\code{special.tokens["uncertainty"]}) will be used to separate the states. If no value is selected, the uncertainty token will be used between all observed characters (\code{special.tokens["uncertainty"]}).
 
 The \code{sample.fun} option allows to specify a function and parameters for the sampling of the continuous traits. The default is \code{sample.fun = list(fun = runif, param = list(min = min, max = max))} for applying a random uniform sampling (\code{runif}) with the parameters (the minimum and the maximum are applied using respectively the \code{min} and \code{max} functions on the estimated data). For applying different samplings to different traits, you can use a list of arguments in the sample format as \code{sample.fun} (e.g. \code{sample.fun = list(trait_uniform = list(fun = runif, param = list(min = min, max = max)), trait_normal = list(fun = rnorm, param = list(mean = mean, sd = function(x)return(diff(range(x))/4)))} - here the standard deviation is calculated as a quarter of the 95\% CI range).
 
