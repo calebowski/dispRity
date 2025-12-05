@@ -7,7 +7,7 @@
 #' @param models A \code{character} vector, unambiguous named \code{list} or \code{matrix} to be passed as model arguments to \code{castor::asr_mk_model} or \code{ape::ace} (see details).
 #' @param sample An \code{integer} for the number of matrices to sample per tree (default is \code{1}). See details.
 #' @param sample.fun If \code{sample > 1}, a named list containing the following elements: \code{fun} the sampling distribution for continuous characters; and \code{param} (optional) a named list of parameters and their estimation function (default is \code{sample.fun = list(fun = runif, param = list(min = min, max = max))}). See details.
-#' @param threshold Is ignored if \code{sample > 1}, else either a \code{character} string for the threshold method (\code{"max"} (default), \code{"max_tiebreaker"}, or \code{"relative"}; see details) or a \code{numeric} value of the absolute threshold (e.g. 0.95).
+#' @param ml.collapse Is ignored if \code{sample > 1}, else either a \code{character} string for the ml.collapse method (\code{"max"} (default), \code{"max_tiebreaker"}, or \code{"relative"}; see details) or a \code{numeric} value of the absolute threshold (e.g. 0.95).
 #' @param special.tokens optional, a named \code{vector} of special tokens to be passed to \code{\link[base]{grep}} (make sure to protect the character with \code{"\\\\"}). By default \code{special.tokens <- c(missing = "\\\\?", inapplicable = "\\\\-", polymorphism = "\\\\&", uncertainty = "\\\\/")}. Note that \code{NA} values are not compared and that the symbol "@" is reserved and cannot be used.
 #' @param special.behaviours optional, a \code{list} of one or more functions for a special behaviour for \code{special.tokens}. See details.
 #' @param brlen.multiplier optional, a vector of branch length modifiers (e.g. to convert time branch length in changes branch length) or a list of vectors (the same length as \code{tree}).
@@ -189,7 +189,7 @@
 #' @author Thomas Guillerme
 #' @export
 
-multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = runif, param = list(min = min, max = max)), threshold = "max", special.tokens, special.behaviours, brlen.multiplier, verbose = FALSE, parallel = FALSE, output, options.args, estimation.details = NULL) {
+multi.ace <- function(data, tree, models, ml.collapse = list(type = "majority"), special.tokens, special.behaviours, brlen.multiplier, verbose = FALSE, parallel = FALSE, output, options.args, estimation.details = NULL) {
 
     match_call <- match.call()
 
@@ -235,33 +235,54 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
     
     #########
     ##
-    ## Handle the other options (threshold, brlen, verbose, parallel, output, estimation.details)
+    ## Handle the other options (ml.collapse, brlen, verbose, parallel, output, estimation.details)
     ##
     #########
 
-    ## threshold
-    check.class(threshold, c("numeric", "character"))
-    if(is(threshold, "character")) {
-        valid_thresholds <- c("max", "max_tiebreaker", "relative")
-        if(!threshold %in% valid_thresholds) {
-            stop(paste0("Invalid threshold option: ", threshold, "! Must be one of: ", paste(valid_thresholds, collapse = ", ")), call. = FALSE)
+    ## ml.collapse
+    check.class(ml.collapse, "list")
+    if(is.null(names(ml.collapse))) {
+        stop(paste0("Invalid ml.collapse option: must be a list"), call. = FALSE)
+    }
+    if(is(ml.collapse, "list")) {
+        valid_types <- c("majority", "relative", "threshold", "sample")
+        if(is.null(ml.collapse$type) || !ml.collapse$type %in% valid_types) {
+        stop(paste0("Invalid ml.collapse$type! Must be one of: ", paste(valid_types, collapse = ", ")), call. = FALSE)
         }
-        ## Use no threshold (just max)
-        if(threshold == "max_tiebreaker"){
-            threshold.type <- "max_tiebreaker"
+        ## Use no ml.collapse (just max)
+        if(ml.collapse$type == "majority"){
+            threshold.type <- "majority"
+            if((isTRUE(ml.collapse$tie.breaker))) {
+                threshold.type <- "majority_tiebreaker"
+            }
         }
-        if(threshold == "max") {
-            threshold.type <- "max"
-        } 
-        if(threshold == "relative"){
+
+        if(ml.collapse$type == "relative"){
             threshold.type <- "relative"
         }
-    }
-    if(is(threshold, "numeric")) {
-        ## Use an absolute threshold
-        threshold.type <- "absolute"
-    }
     
+        if(ml.collapse$type == "threshold") {
+            ## Use an absolute ml.collapse
+            threshold.type <- "threshold"
+        }
+
+        if(ml.collapse$type == "sample") {
+            ## Validate sample number
+            if(is.null(ml.collapse$sample)) {
+                stop("ml.collapse$sample must be specified when using type = 'sample'", call. = FALSE)
+            }
+            check.class(ml.collapse$sample, c("integer", "numeric"))
+            # check.class(ml.collapse$sample.fun, "list")
+            sample <- ml.collapse$sample
+            do_sample <- sample > 1
+            if(do_sample){
+                threshold.type <- "sample"
+                # sample.fun <- ml.collapse$sample.fun
+            } else {
+                stop("ml.collapse$sample must be > 1", call. = FALSE)
+            }
+        }
+    }
     if(!skip_estimations) {
         ## verbose
         check.class(verbose, "logical")
@@ -286,13 +307,13 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
     }
 
     ## Sampling
-    check.class(sample, c("integer", "numeric"))
-    do_sample <- sample > 1
-    if(do_sample) {
-        ## Override the threshold arguments (no threshold used)
-        threshold.type <- "sample"
-        threshold <- sample
-    }
+    # check.class(sample, c("integer", "numeric"))
+    # do_sample <- sample > 1
+    # if(do_sample) {
+    #     ## Override the ml.collapse arguments (no ml.collapse used)
+    #     threshold.type <- "sample"
+    #     ml.collapse <- sample
+    # }
     
     if(!skip_estimations) {
         ## brlen multiplier
@@ -875,6 +896,7 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
         } else {
             ## Check the sampling (if required)
             if(do_sample) {
+                sample.fun <- ml.collapse$sample.fun
                 sample.fun_class <- check.class(sample.fun, "list")
                 ## If sample.fun is a single list
                 if(!is.null(names(sample.fun)) && names(sample.fun)[1] == "fun") {
@@ -926,14 +948,14 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
 
         ## Apply the selector
         switch(threshold.type,
-            relative = {select.states <- function(taxon, threshold) {
+            relative = {select.states <- function(taxon, ml.collapse) {
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
                                                     return(names(taxon[taxon >= (max(taxon) - 1/length(taxon))]))
                                                   }
                                                  }},
-            max = {select.states <- function(taxon, threshold) {
+            majority = {select.states <- function(taxon, ml.collapse) {
                                   if(all(is.na(taxon))) {
                                     return(NA)
                                   } else {
@@ -941,7 +963,7 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                   }
                              }},
 
-            max_tiebreaker = {select.states <- function(taxon, threshold) {
+            majority_tiebreaker = {select.states <- function(taxon, ml.collapse) {
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
@@ -953,23 +975,25 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
                                                     }
                                                   }
                                                  }},
-            absolute = {select.states <- function(taxon, threshold) {
+            threshold = {select.states <- function(taxon, ml.collapse) {
                                                   if(all(is.na(taxon))) {
                                                     return(NA)
                                                   } else {
+                                                    threshold <- ml.collapse$threshold
                                                     return(names(taxon[taxon >= threshold]))
                                                   }
                                                  }},
-            sample  = {select.states <- function(taxon, threshold){
+            sample  = {select.states <- function(taxon, ml.collapse){
                                                  if(all(is.na(taxon))) {
                                                     return(NA)
                                                  } else {
-                                                    return(sample(names(taxon), size = threshold, prob = taxon, replace = TRUE))
+                                                    n <- ml.collapse$sample
+                                                    return(sample(names(taxon), size = n, prob = taxon, replace = TRUE))
                                                  }}}
                                              )
 
         ## Get the ancestral states
-        ancestral_states <- lapply(ancestral_estimations, lapply, translate.likelihood, threshold, select.states, special.tokens, do_sample)
+        ancestral_states <- lapply(ancestral_estimations, lapply, translate.likelihood, ml.collapse, select.states, special.tokens, do_sample) ## needs fixing
 
         ## Add the invariant characters
         if(has_invariants) {
@@ -1095,4 +1119,101 @@ multi.ace <- function(data, tree, models, sample = 1, sample.fun = list(fun = ru
 # serial_time <- serial_end-serial_start
 # parallel_time <- parallel_end-parallel_start
 # claddis_time <- claddis_end-claddis_start
+## Set seed for reproducibility
 
+
+# set.seed(42)
+
+# ## Create a tree with 15 tips
+# tree <- ape::rtree(15)
+# tree$tip.label <- paste0("t", 1:15)
+
+# ## Create discrete trait data (5 characters)
+# discrete_data <- matrix(
+#     sample(c("0", "1", "2", "0/1", "1&2", "?", "-"), 
+#            size = 15 * 5, 
+#            replace = TRUE,
+#            prob = c(0.3, 0.3, 0.2, 0.05, 0.05, 0.05, 0.05)),
+#     nrow = 15,
+#     dimnames = list(tree$tip.label, paste0("disc_", 1:5))
+# )
+
+# ## Create continuous trait data (3 characters)
+# continuous_data <- matrix(
+#     rnorm(15 * 3, mean = 5, sd = 2),
+#     nrow = 15,
+#     dimnames = list(tree$tip.label, paste0("cont_", 1:3))
+# )
+
+# ## Combine discrete and continuous
+# combined_data <- cbind(discrete_data, continuous_data)
+
+# ## Test 1: Discrete only with default ml.collapse
+# test1 <- multi.ace(discrete_data, tree, 
+#                    ml.collapse = list(type = "majority"))
+# head(test1)
+
+# ## Test 2: Discrete with tie breaker
+# test2 <- multi.ace(discrete_data, tree, 
+#                    ml.collapse = list(type = "majority", tie.breaker = TRUE))
+# head(test2)
+
+# ## Test 3: Discrete with threshold
+# test3 <- multi.ace(discrete_data, tree, 
+#                    ml.collapse = list(type = "threshold", threshold = 0.8))
+# head(test3)
+
+# ## Test 4: Discrete with sampling
+# test4 <- multi.ace(discrete_data, tree, 
+#                    ml.collapse = list(type = "sample", sample = 10))
+# dim(test4[[1]]) # Should be 13 nodes x 5 characters
+
+# ## Test 5: Continuous only (no sampling)
+# test5 <- multi.ace(continuous_data, tree, 
+#                    ml.collapse = list(type = "majority"))
+# head(test5)
+
+# ## Test 6: Continuous with sampling
+# test6 <- multi.ace(continuous_data, tree, 
+#                    ml.collapse = list(type = "sample", 
+#                                      sample = 20,
+#                                      sample.fun = list(fun = runif, 
+#                                                       param = list(min = min, max = max))))
+# length(test6) # Should be 20 samples
+# dim(test6[[1]]) # Should be 13 nodes x 3 characters
+
+# ## Test 7: Combined discrete + continuous (no sampling)
+# test7 <- multi.ace(combined_data, tree, 
+#                    models = c(rep("ER", 5), rep("BM", 3)),
+#                    ml.collapse = list(type = "majority"))
+# head(test7)
+
+# ## Test 8: Combined with sampling
+# test8 <- multi.ace(combined_data, tree, 
+#                    models = c(rep("ER", 5), rep("BM", 3)),
+#                    ml.collapse = list(type = "sample", 
+#                                      sample = 15,
+#                                      sample.fun = list(fun = rnorm,
+#                                                       param = list(mean = mean,
+#                                                                   sd = sd))))
+# length(test8) # Should be 15 samples
+# dim(test8[[1]]) # Should be 13 nodes x 8 characters
+
+# ## Test 9: Multiple trees
+# multi_trees <- ape::rmtree(3, 15)
+# for(i in 1:3) multi_trees[[i]]$tip.label <- paste0("t", 1:15)
+
+# test9 <- multi.ace(discrete_data, multi_trees, 
+#                    ml.collapse = list(type = "majority"))
+# length(test9) # Should be 3 trees
+
+# ## Test 10: Save as multi.ace object and resample
+# test10a <- multi.ace(combined_data, tree, 
+#                      models = c(rep("ER", 5), rep("BM", 3)),
+#                      output = "multi.ace")
+# class(test10a) # Should be "dispRity" "multi.ace"
+
+# ## Resample with different strategies
+# test10b <- multi.ace(test10a, 
+#                      ml.collapse = list(type = "sample", sample = 25))
+# length(test10b) # Should be 25 samples
