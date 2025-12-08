@@ -107,7 +107,7 @@ Additional listed elements for \code{ml.collapse = list()}:
 It is also possible to just run the estimations without sampling but for sampling later (i.e. just run the estimations; save them as a \code{multi.ace} object and then rerun them into the function). You can do that by using the option \code{output = "multi.ace"}. Using this option ignores the following options: \code{ml.collapse}, and \code{estimation.details}.
 }
 \examples{
-set.seed(42)
+set.seed(34)
 ## A simple example:
 ## A random tree with 10 tips
 tree <- rcoal(10)
@@ -189,7 +189,7 @@ ancestor_estimates <- multi.ace(matrix_simple, multiple_trees, output = "multi.a
 
 ## Estimating ancestral states by sampling distributions
 ## Discrete characters:
-sampled_ancestors <- multi.ace(ancestor_estimates, sample = 25)
+sampled_ancestors <- multi.ace(ancestor_estimates, ml.collapse = list(type = "sample", sample = 25))
 
 ## Continuous characters:
 ## Sampling 100 matrices from the ancestral estimations

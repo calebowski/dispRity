@@ -76,7 +76,7 @@
 #' If using the option \code{output = "multi.ace"}, the function returns a \code{"multi.ace"} object that can be recycled in the \code{multi.ace} function. This can be useful for testing different sampling strategies of threshold methods without having to recalculate all the ancestral trait estimations.
 #' 
 #' @examples
-#' set.seed(42)
+#' set.seed(34)
 #' ## A simple example:
 #' ## A random tree with 10 tips
 #' tree <- rcoal(10)
@@ -158,7 +158,7 @@
 #'
 #' ## Estimating ancestral states by sampling distributions
 #' ## Discrete characters:
-#' sampled_ancestors <- multi.ace(ancestor_estimates, sample = 25)
+#' sampled_ancestors <- multi.ace(ancestor_estimates, ml.collapse = list(type = "sample", sample = 25))
 #'
 #' ## Continuous characters:
 #' ## Sampling 100 matrices from the ancestral estimations
