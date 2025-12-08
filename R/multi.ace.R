@@ -158,11 +158,15 @@
 #'
 #' ## Estimating ancestral states by sampling distributions
 #' ## Discrete characters:
-#' sampled_ancestors <- multi.ace(ancestor_estimates, ml.collapse = list(type = "sample", sample = 25))
+#' sampled_ancestors <- multi.ace(ancestor_estimates,
+#'      ml.collapse = list(type = "sample",
+#'                         sample = 25))
 #'
 #' ## Continuous characters:
 #' ## Sampling 100 matrices from the ancestral estimations
-#' sampled_traits <- multi.ace(matrix_continuous, tree, ml.collapse = list(type = "sample", sample = 100))
+#' sampled_traits <- multi.ace(matrix_continuous, tree,
+#'      ml.collapse = list(type = "sample",
+#'                         sample = 100))
 #' ## Setting up two specific sampling functions
 #' sample_fun <- list(
 #'      unif_sampl = list(fun = runif,
@@ -172,7 +176,10 @@
 #'                                     sd = function(x)return(diff(range(x))/4)))
 #' )
 #' ## Sampling 100 matrices with different distribution functions
-#' sampled_traits <- multi.ace(matrix_continuous, tree, ml.collapse = list(type = "sample", sample = 100, sample.fun = sample_fun))
+#' sampled_traits <- multi.ace(matrix_continuous, tree,
+#'      ml.collapse = list(type = "sample",
+#'                         sample = 100,
+#'                         sample.fun = sample_fun))
 #' 
 #' @seealso
 #' \code{char.diff}, \code{castor::asr_mk_model}, \code{ape::ace}
