@@ -241,7 +241,7 @@ multi.ace <- function(data, tree, models, ml.collapse = list(type = "majority"),
     ## ml.collapse
     check.class(ml.collapse, "list")
     if(is.null(names(ml.collapse))) {
-        stop(paste0("Invalid ml.collapse option: must be a list"), call. = FALSE)
+        stop(paste0("Invalid ml.collapse option: must be a named list with $type"), call. = FALSE)
     }
     if(is(ml.collapse, "list")) {
         valid_types <- c("majority", "relative", "threshold", "sample")
